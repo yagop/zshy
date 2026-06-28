@@ -47,23 +47,31 @@ export async function compileProject(config: ProjectOptions, entryPoints: string
   let shouldWriteFiles = true;
 
   host.writeFile = (fileName, data, writeByteOrderMark, onError, sourceFiles) => {
-    // Transform output file extensions
+    // Transform output file extensions. When an extension is renamed we must
+    // also rewrite the in-file references so the .cjs/.mjs build points at its
+    // own source map instead of the original .js/.d.ts map (issue #71).
     let outputFileName = fileName;
-    const processedData = data;
+    let processedData = data;
     if (fileName.endsWith(".js")) {
       outputFileName = fileName.replace(/\.js$/, jsExt);
+      // Keep the trailing `//# sourceMappingURL=` comment pointing at the renamed map.
+      processedData = processedData.replace(/(\/\/# sourceMappingURL=\S+)\.js\.map/, `$1${jsExt}.map`);
     }
 
     if (fileName.endsWith(".d.ts")) {
       outputFileName = fileName.replace(/\.d\.ts$/, dtsExt);
+      processedData = processedData.replace(/(\/\/# sourceMappingURL=\S+)\.d\.ts\.map/, `$1${dtsExt}.map`);
     }
     // Handle source map files
     if (fileName.endsWith(".js.map")) {
       outputFileName = fileName.replace(/\.js\.map$/, jsExt + ".map");
+      // Keep the map's "file" field naming the renamed generated file.
+      processedData = processedData.replace(/("file":\s*"[^"]+)\.js"/, `$1${jsExt}"`);
     }
 
     if (fileName.endsWith(".d.ts.map")) {
       outputFileName = fileName.replace(/\.d\.ts\.map$/, dtsExt + ".map");
+      processedData = processedData.replace(/("file":\s*"[^"]+)\.d\.ts"/, `$1${dtsExt}"`);
     }
 
     // Track the file that would be written
