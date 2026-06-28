@@ -55,12 +55,13 @@ export async function compileProject(config: ProjectOptions, entryPoints: string
     if (fileName.endsWith(".js")) {
       outputFileName = fileName.replace(/\.js$/, jsExt);
       // Keep the trailing `//# sourceMappingURL=` comment pointing at the renamed map.
-      processedData = processedData.replace(/(\/\/# sourceMappingURL=\S+)\.js\.map/, `$1${jsExt}.map`);
+      // Anchored to end-of-file so a sourceMappingURL-looking string in user code is left alone.
+      processedData = processedData.replace(/(\/\/# sourceMappingURL=\S+)\.js\.map(?=\s*$)/, `$1${jsExt}.map`);
     }
 
     if (fileName.endsWith(".d.ts")) {
       outputFileName = fileName.replace(/\.d\.ts$/, dtsExt);
-      processedData = processedData.replace(/(\/\/# sourceMappingURL=\S+)\.d\.ts\.map/, `$1${dtsExt}.map`);
+      processedData = processedData.replace(/(\/\/# sourceMappingURL=\S+)\.d\.ts\.map(?=\s*$)/, `$1${dtsExt}.map`);
     }
     // Handle source map files
     if (fileName.endsWith(".js.map")) {
